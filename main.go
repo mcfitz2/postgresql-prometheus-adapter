@@ -294,7 +294,7 @@ func read(logger log.Logger, reader reader) http.Handler {
 		resp, err = reader.Read(&req)
 		if err != nil {
 			fmt.Printf("MAIN req.Queries: %v\n", req.Queries)
-			level.Warn(logger).Log("msg", "Error executing query", "query", req, "storage", reader.Name(), "err", err)
+			level.Warn(logger).Log("msg", "Error executing query", "query", fmt.Sprintf("%v",req), "storage", reader.Name(), "err", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
