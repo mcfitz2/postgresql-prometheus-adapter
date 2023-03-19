@@ -175,10 +175,17 @@ func (c *PGWriter) PGWriterSave() {
 			level.Error(c.logger).Log("msg", "COPY failed for metric_labels", "err", err)
 		}
 		if copyCount != lblCount {
-			level.Error(c.logger).Log("msg", "All rows not copied metric_labels", "err", err)
+			level.Error(c.logger).Log("msg", "All rows not copied metric_labels", "copied", copyCount, "wanted", lblCount)
 		}
 	}
-	copyCount, err = c.DB.CopyFrom(context.Background(), pgx.Identifier{"metric_values"}, []string{"metric_id", "metric_time", "metric_value"}, pgx.CopyFromRows(c.valueRows))
+	copyCount, err = c.DB.CopyFrom(
+		context.Background(),
+		pgx.Identifier{"metric_values"},
+		[]string{"metric_id", "metric_time", "metric_value"},
+		pgx.CopyFromSlice(len(c.valueRows), func(i int) ([]interface{}, error) {
+			return c.valueRows[i], nil
+		}),
+	)
 	rowCount = int64(len(c.valueRows))
 	c.valueRows = nil
 	c.PGWriterMutex.Unlock()
@@ -186,7 +193,7 @@ func (c *PGWriter) PGWriterSave() {
 		level.Error(c.logger).Log("msg", "COPY failed for metric_values", "err", err)
 	}
 	if copyCount != rowCount {
-		level.Error(c.logger).Log("msg", "All rows not copied metric_values", "err", err)
+		level.Error(c.logger).Log("msg", "All rows not copied metric_values", "copied", copyCount, "wanted", rowCount)
 	}
 	duration := time.Since(begin).Seconds()
 	level.Info(c.logger).Log("metric", fmt.Sprintf("BGWriter%d: Processed samples count,%d, duration,%v", c.id, rowCount+lblCount, duration))
